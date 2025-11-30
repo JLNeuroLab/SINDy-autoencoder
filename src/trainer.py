@@ -181,6 +181,7 @@ class Trainer_SINDyAE:
             n_epochs: int = 10000,
             warmup_epochs: int = 0,
             refine_epochs: int = 0, # not used for now
+            threshold_start_epoch: int = 100,
             log_every: int = 100,
         ):
         train_loader = self._build_dataloader(X)
@@ -225,7 +226,7 @@ class Trainer_SINDyAE:
             stats = self._train_one_epoch(train_loader=train_loader)
             self.history_loss.append(stats)
 
-            if epoch % self.threshold_freq == 0:
+            if epoch >= threshold_start_epoch and epoch % self.threshold_freq == 0:
                 self._apply_threshold()
             
             if epoch % log_every == 0 or epoch == 1 or epoch == n_epochs:
