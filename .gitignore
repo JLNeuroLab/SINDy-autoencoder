@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.ipynb_checkpoints/
+
+# VS Code
+.vscode/
+
+# Data files
+*.npy
+*.npz
+*.csv
+*.json
+datasets/
+dataset_*/
+fastf1_cache/
+
+# Colab / Jupyter
+*.ipynb_checkpoints
