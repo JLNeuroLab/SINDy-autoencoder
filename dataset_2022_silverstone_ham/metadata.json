@@ -1,0 +1,23 @@
+{
+    "year": 2022,
+    "gp": "Silverstone",
+    "session": "R",
+    "driver": "HAM",
+    "dt": 0.02,
+    "all_laps": false,
+    "min_lap_time": 0.0,
+    "n_samples": 4526,
+    "n_state": 9,
+    "n_laps_used": 1,
+    "state_cols": [
+        "Distance",
+        "Speed",
+        "Throttle",
+        "Brake",
+        "nGear",
+        "RPM",
+        "X",
+        "Y",
+        "Z"
+    ]
+}

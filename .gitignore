@@ -10,12 +10,6 @@ __pycache__/
 .vscode/
 
 # Data files
-*.npy
-*.npz
-*.csv
-*.json
-datasets/
-dataset_*/
 fastf1_cache/
 
 # Colab / Jupyter
