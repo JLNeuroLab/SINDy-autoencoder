@@ -70,13 +70,23 @@ class Trainer_SINDyAE:
     # ---------------------------------------------------------------------
     # Build dataloader from X
     # ---------------------------------------------------------------------
-    def _build_dataloader(self, X):
+    def _build_dataloader(self, X, Xdot=None):
 
-        Xdot_np = compute_derivatives(X,
-                                    self.dt,
-                                    diff_method=self.diff_method,
-                                    **self.diff_kwargs,
-                    )
+        """
+        If Xdot is None → compute derivatives inside (using diff_method).
+        If Xdot is provided → use it directly (precomputed derivatives).
+        """
+        if Xdot is None:
+            Xdot_np = compute_derivatives(
+                X,
+                self.dt,
+                diff_method=self.diff_method,
+                **self.diff_kwargs,
+            )
+        else:
+            # just convert provided derivatives
+            Xdot_np = np.asarray(Xdot, dtype=float)
+
         # 2. Convert to tensors
         if isinstance(X, torch.Tensor):
             X_torch = X.detach().clone().float()
@@ -178,13 +188,14 @@ class Trainer_SINDyAE:
     def fit(
             self,
             X,
+            Xdot=None,
             n_epochs: int = 10000,
             warmup_epochs: int = 0,
             refine_epochs: int = 0, # not used for now
             threshold_start_epoch: int = 100,
             log_every: int = 100,
         ):
-        train_loader = self._build_dataloader(X)
+        train_loader = self._build_dataloader(X, Xdot)
 
          # -------------------------
         # Optional: AE warmup stage
