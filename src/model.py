@@ -123,8 +123,25 @@ class SINDy_layer(nn.Module):
         
         self.Xi = nn.Parameter(torch.zeros(n_terms, z_dim))
         self.register_buffer("Xi_mask", torch.ones_like(self.Xi))
+
+        # latent normalization buffers (initialized as identity)
+        self.register_buffer("z_mean", torch.zeros(1, z_dim))
+        self.register_buffer("z_std",  torch.ones(1, z_dim))
     
+    def set_normalization(self, z_mean: torch.Tensor, z_std: torch.Tensor):
+        """
+        Set latent normalization statistics.
+        z_mean, z_std shape: [1, z_dim]
+        """
+        # make sure shapes match
+        assert z_mean.shape == self.z_mean.shape
+        assert z_std.shape == self.z_std.shape
+        self.z_mean.copy_(z_mean)
+        self.z_std.copy_(z_std)
+
     def forward(self, z):
+        z_norm = (z - self.z_mean.to(z.device)) / self.z_std.to(z.device)
+        
         Theta = build_library_torch( 
                                     z, 
                                     self.poly_order, 

@@ -143,6 +143,34 @@ class Trainer_SINDyAE:
             small = torch.abs(Xi) < self.threshold
             Xi[small] = 0.0
             mask[small] = 0.0
+    
+    def compute_latent_stats(self, train_loader):
+        """
+        Compute z_mean and z_std over the training set, using the current encoder.
+        """
+        self.model.eval()
+        Z_list = []
+
+        with torch.no_grad():
+            for batch in train_loader:
+                # batch can be (x_seq, xdot_seq) because of TimeSeriesDataset
+                if isinstance(batch, (list, tuple)):
+                    x_seq = batch[0]
+                else:
+                    x_seq = batch
+
+                x_seq = x_seq.to(self.device)      # [B, T, x_dim]
+                B, T, D = x_seq.shape
+
+                x_flat = x_seq.reshape(B * T, D)   # [B*T, x_dim]
+                z_flat = self.model.autoencoder.encode(x_flat)  # [B*T, z_dim]
+                Z_list.append(z_flat.cpu())
+
+        Z = torch.cat(Z_list, dim=0)              # [N_total, z_dim]
+        z_mean = Z.mean(dim=0, keepdim=True)      # [1, z_dim]
+        z_std  = Z.std(dim=0, keepdim=True) + 1e-8
+
+        return z_mean, z_std
 
     # ---------------------------------------------------------------------
     # Full training loop
@@ -151,11 +179,47 @@ class Trainer_SINDyAE:
             self,
             X,
             n_epochs: int = 10000,
-            refine_epochs: int = 0,
+            warmup_epochs: int = 0,
+            refine_epochs: int = 0, # not used for now
             log_every: int = 100,
         ):
         train_loader = self._build_dataloader(X)
 
+         # -------------------------
+        # Optional: AE warmup stage
+        # -------------------------
+        if warmup_epochs > 0:
+            print(f"[WARMUP] Training autoencoder only for {warmup_epochs} epochs")
+            # save original weights
+            orig_lambda_dx = self.lambda_dx
+            orig_lambda_dz = self.lambda_dz
+
+            # disable dynamics losses during warmup
+            self.lambda_dx = 0.0
+            self.lambda_dz = 0.0
+
+            for epoch in range(1, warmup_epochs + 1):
+                stats = self._train_one_epoch(train_loader=train_loader)
+                if epoch % log_every == 0 or epoch == warmup_epochs:
+                    print(
+                        f"[WARMUP] Epoch {epoch:5d}/{warmup_epochs} | "
+                        f"Lrecon: {stats['L_recon']:.4e}"
+                    )
+
+            # restore dynamics weights
+            self.lambda_dx = orig_lambda_dx
+            self.lambda_dz = orig_lambda_dz
+
+        # --------------------------------------
+        # Latent stats: set z_mean / z_std in SINDy
+        # --------------------------------------
+        z_mean, z_std = self.compute_latent_stats(train_loader)
+        self.model.sindy.set_normalization(z_mean, z_std)
+        print("[INIT] Latent normalization set.")
+
+        # -------------------------
+        # Main training loop
+        # -------------------------
         for epoch in range(1, n_epochs + 1):
 
             stats = self._train_one_epoch(train_loader=train_loader)
